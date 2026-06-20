@@ -167,7 +167,7 @@ async def main(request: SonolusRequest, item_name: str):
         if sa_levels:
             sections.append(
                 LevelItemSection(
-                    title="#SAME_ARTISTS",
+                    title="#SAME_AUTHOR",
                     icon="level",
                     items=sa_levels,
                 )

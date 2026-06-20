@@ -323,7 +323,8 @@ def build_level_description(
     lines = []
 
     if music.artist:
-        lines.append(f"#ARTISTS:#SEPARATOR_COLON:{music.artist.name}")
+        lines.append(f"#AUTHOR:#SEPARATOR_COLON:{music.artist.name}")
+        lines.append("")
     if music.lyricist:
         lines.append(f"#LYRICIST:#SEPARATOR_COLON:{music.lyricist}")
     if music.composer:
