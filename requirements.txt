@@ -9,3 +9,5 @@ git+https://github.com/UntitledCharts/sonolus-level-converters
 rapidfuzz
 cutlet
 unidic
+asyncpg
+aioboto3
