@@ -21,8 +21,13 @@ CREATE TABLE IF NOT EXISTS chart_data (
     combo INT NOT NULL,
     duration INT NOT NULL,
     bundle_hash TEXT NOT NULL DEFAULT '',
+    converter_version TEXT NOT NULL DEFAULT '',
     PRIMARY KEY (music_id, difficulty)
 )
+"""
+
+ADD_CONVERTER_VERSION_SQL = """
+ALTER TABLE chart_data ADD COLUMN IF NOT EXISTS converter_version TEXT NOT NULL DEFAULT ''
 """
 
 _music_cache: dict[str, list[dict]] = {}
@@ -341,19 +346,25 @@ async def _check_and_update_charts():
             return ""
         return hashlib.md5(json.dumps(sorted(bundles.items())).encode()).hexdigest()
 
+    from sonolus_converters import __version__ as converter_version
+
     async with _db_pool.acquire() as conn:
         rows = await conn.fetch(
-            "SELECT music_id, difficulty, bundle_hash FROM chart_data"
+            "SELECT music_id, difficulty, bundle_hash, converter_version FROM chart_data"
         )
     db_bundle_hashes: dict[int, str] = {}
+    db_converter_versions: dict[int, str] = {}
     existing_set: set[tuple[int, str]] = set()
     for r in rows:
         db_bundle_hashes[r["music_id"]] = r["bundle_hash"]
+        db_converter_versions[r["music_id"]] = r["converter_version"]
         existing_set.add((r["music_id"], r["difficulty"]))
 
     changed_music_ids: set[int] = set()
     for music_id, remote_hash in bundle_hash_map.items():
         if db_bundle_hashes.get(music_id) != remote_hash:
+            changed_music_ids.add(music_id)
+        elif db_converter_versions.get(music_id) != converter_version:
             changed_music_ids.add(music_id)
 
     if not changed_music_ids:
@@ -432,16 +443,17 @@ async def _check_and_update_charts():
             async with _db_pool.acquire() as conn:
                 await conn.execute(
                     """
-                    INSERT INTO chart_data (music_id, difficulty, combo, duration, bundle_hash)
-                    VALUES ($1, $2, $3, $4, $5)
+                    INSERT INTO chart_data (music_id, difficulty, combo, duration, bundle_hash, converter_version)
+                    VALUES ($1, $2, $3, $4, $5, $6)
                     ON CONFLICT (music_id, difficulty) DO UPDATE
-                    SET combo = $3, duration = $4, bundle_hash = $5
+                    SET combo = $3, duration = $4, bundle_hash = $5, converter_version = $6
                     """,
                     music_id,
                     difficulty,
                     combo,
                     duration,
                     bh,
+                    converter_version,
                 )
 
             if music_id not in _chart_info:
@@ -514,6 +526,7 @@ async def lifespan(app: FastAPI):
 
     async with _db_pool.acquire() as conn:
         await conn.execute(CREATE_TABLE_SQL)
+        await conn.execute(ADD_CONVERTER_VERSION_SQL)
 
     _load_from_disk()
     await _load_chart_info_from_db()

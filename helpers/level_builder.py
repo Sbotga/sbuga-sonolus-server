@@ -289,12 +289,16 @@ def _srl(
     url: str, music_id: int, asset_suffix: str, bundle_key: str | None = None
 ) -> SRL:
     import hashlib
+    from sonolus_converters import __version__ as _slc_version
 
     key = bundle_key or asset_suffix
     h = _bundle_hashes.get(str(music_id), {}).get(key)
     if not h:
         return SRL(url=url)
-    sha1 = hashlib.sha1(f"{h}-{asset_suffix}".encode()).hexdigest()
+    raw = f"{h}-{asset_suffix}"
+    if asset_suffix == "score":
+        raw += f"-score-{_slc_version}"
+    sha1 = hashlib.sha1(raw.encode()).hexdigest()
     return SRL(hash=sha1, url=url)
 
 

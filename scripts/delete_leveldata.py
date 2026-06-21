@@ -49,7 +49,7 @@ async def main():
             deleted += len(batch)
         print(f"s3: deleted {deleted} objects")
 
-    print("done. restart sss to re-process charts.")
+    print("done. all level data deleted.")
 
 
 asyncio.run(main())
