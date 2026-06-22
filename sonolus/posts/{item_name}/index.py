@@ -63,6 +63,15 @@ async def main(request: SonolusRequest, item_name: str):
 
     collab_name = collab_musics[0].collaboration
 
+    # filter songs for display based on spoiler setting
+    if request.state.show_spoilers:
+        visible_songs = collab_musics
+    else:
+        import time
+
+        now_ms = int(time.time() * 1000)
+        visible_songs = [m for m in collab_musics if m.published_at <= now_ms]
+
     post = build_collaboration_post(
         collab_name=collab_name,
         collab_id=target_id,
@@ -73,7 +82,7 @@ async def main(request: SonolusRequest, item_name: str):
     )
 
     song_playlists = []
-    for music in sorted(collab_musics, key=lambda m: m.published_at, reverse=True):
+    for music in sorted(visible_songs, key=lambda m: m.published_at, reverse=True):
         sp = await build_playlist_item(
             music=music,
             engine=engine,

@@ -49,7 +49,6 @@ class MusicVocal(BaseModel):
     bgm_url: str | None = None
     bgm_nosil_url: str | None = None
     preview_url: str | None = None
-    preview_nosil_url: str | None = None
     published_at: int | None = None
     variants: list[VocalVariant] = []
 

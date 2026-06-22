@@ -435,7 +435,7 @@ def build_level_item(
         )
 
     bgm_url = vocal.bgm_nosil_url or vocal.bgm_url or ""
-    preview_url = vocal.preview_nosil_url or vocal.preview_url or ""
+    preview_url = vocal.preview_url or ""
 
     return LevelItem(
         name=level_id,

@@ -607,7 +607,7 @@ async def _hash_asset_files():
                 short_bh
                 and db_bundle_markers.get((music.id, f"short/{abn}")) != short_bh
             ):
-                url = vocal.preview_nosil_url or vocal.preview_url
+                url = vocal.preview_url
                 if url:
                     urls_to_hash.append((music.id, f"short/{abn}", url, short_bh))
 
