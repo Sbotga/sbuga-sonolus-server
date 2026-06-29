@@ -176,14 +176,17 @@ def get_merged_musics(
     all_game_chars: dict[int, GameCharacterData] = {}
     all_outside_chars: dict[int, OutsideCharacterData] = {}
     all_artists: dict[int, MusicArtist] = {}
-    if localization != "ja":
-        for m in music_data.get("en", []):
-            for cid, cdata in m.game_characters.items():
-                all_game_chars[cid] = cdata
-            for cid, cdata in m.outside_characters.items():
-                all_outside_chars[cid] = cdata
-            if m.artist:
-                all_artists[m.artist.id] = m.artist
+    is_jp = localization == "ja"
+    preferred_region = "jp" if is_jp else "en"
+    preferred_map = jp_map if is_jp else en_map
+
+    for m in music_data.get(preferred_region, []):
+        for cid, cdata in m.game_characters.items():
+            all_game_chars[cid] = cdata
+        for cid, cdata in m.outside_characters.items():
+            all_outside_chars[cid] = cdata
+        if m.artist:
+            all_artists[m.artist.id] = m.artist
 
     all_ids = set(en_map.keys()) | set(jp_map.keys())
     merged: list[Music] = []
@@ -205,27 +208,32 @@ def get_merged_musics(
             if not music.vocals:
                 continue
 
-        if localization != "ja":
-            music = music.model_copy()
-            if mid in en_map:
-                en_music = en_map[mid]
-                music.game_characters = en_music.game_characters
-                music.outside_characters = en_music.outside_characters
-                if en_music.artist:
-                    music.artist = en_music.artist
-                if en_music.collaboration:
-                    music.collaboration = en_music.collaboration
-            else:
-                music.game_characters = {
-                    cid: all_game_chars.get(cid, music.game_characters[cid])
-                    for cid in music.game_characters
-                }
-                music.outside_characters = {
-                    cid: all_outside_chars.get(cid, music.outside_characters[cid])
-                    for cid in music.outside_characters
-                }
-                if music.artist and music.artist.id in all_artists:
-                    music.artist = all_artists[music.artist.id]
+        music = music.model_copy()
+        if mid in preferred_map:
+            pref_music = preferred_map[mid]
+            music.game_characters = {
+                cid: all_game_chars.get(cid, music.game_characters[cid])
+                for cid in music.game_characters
+            } | pref_music.game_characters
+            music.outside_characters = {
+                cid: all_outside_chars.get(cid, music.outside_characters[cid])
+                for cid in music.outside_characters
+            } | pref_music.outside_characters
+            if pref_music.artist:
+                music.artist = pref_music.artist
+            if pref_music.collaboration:
+                music.collaboration = pref_music.collaboration
+        else:
+            music.game_characters = {
+                cid: all_game_chars.get(cid, music.game_characters[cid])
+                for cid in music.game_characters
+            }
+            music.outside_characters = {
+                cid: all_outside_chars.get(cid, music.outside_characters[cid])
+                for cid in music.outside_characters
+            }
+            if music.artist and music.artist.id in all_artists:
+                music.artist = all_artists[music.artist.id]
 
         merged.append(music)
 
