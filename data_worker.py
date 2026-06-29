@@ -475,7 +475,20 @@ async def _check_and_update_charts():
             chart_bytes = await _fetch_bytes(http_session, url)
 
         if not chart_bytes:
-            processed += 1
+            print(f"[DataWorker] chart 404: {music_id}/{difficulty}")
+            async with _db_pool.acquire() as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO chart_data (music_id, difficulty, combo, duration, bundle_hash, converter_version, file_hash)
+                    VALUES ($1, $2, 0, 0, $3, $4, '')
+                    ON CONFLICT (music_id, difficulty) DO UPDATE
+                    SET bundle_hash = $3, converter_version = $4
+                    """,
+                    music_id,
+                    difficulty,
+                    bh,
+                    converter_version,
+                )
             return
 
         try:
@@ -618,12 +631,13 @@ async def _hash_asset_files():
     print(f"[DataWorker] hashing {total_to_hash} asset files...")
     sem = asyncio.Semaphore(50)
     hashed = 0
+    done = 0
     db_inserts: list[tuple[int, str, str, str]] = []
 
     async def _hash_one(
         session: aiohttp.ClientSession, music_id: int, hash_key: str, url: str, bh: str
     ):
-        nonlocal hashed
+        nonlocal hashed, done
         async with sem:
             data = await _fetch_bytes(session, url)
         if data:
@@ -631,7 +645,11 @@ async def _hash_asset_files():
             mid_str = str(music_id)
             _file_hashes.setdefault(mid_str, {})[hash_key] = sha1
             db_inserts.append((music_id, hash_key, sha1, bh))
-        hashed += 1
+            hashed += 1
+        else:
+            print(f"[DataWorker] asset 404: {music_id}/{hash_key}")
+            db_inserts.append((music_id, hash_key, "", bh))
+        done += 1
 
     BATCH = 100
     async with aiohttp.ClientSession() as session:
@@ -640,7 +658,7 @@ async def _hash_asset_files():
             await asyncio.gather(
                 *[_hash_one(session, mid, k, u, bh) for mid, k, u, bh in batch]
             )
-            print(f"[DataWorker] hashing assets {hashed}/{total_to_hash}")
+            print(f"[DataWorker] hashing assets {done}/{total_to_hash}")
 
     if db_inserts:
         async with _db_pool.acquire() as conn:
@@ -654,7 +672,7 @@ async def _hash_asset_files():
                 db_inserts,
             )
 
-    print(f"[DataWorker] hashed {hashed} asset files")
+    print(f"[DataWorker] hashed {hashed}/{total_to_hash} asset files")
 
 
 # ---- main update loop ----
