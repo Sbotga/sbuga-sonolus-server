@@ -88,14 +88,14 @@ def _is_cjk(text: str) -> bool:
 
 def _build_char_name(char_data: GameCharacterData) -> str:
     if not char_data.firstName:
-        return char_data.givenName.title()
+        return char_data.givenName
     if _is_cjk(char_data.givenName):
         sep = ""
     else:
         sep = " "
     if char_data.unit == "piapro":
-        return f"{char_data.firstName}{sep}{char_data.givenName}".title()
-    return f"{char_data.givenName}{sep}{char_data.firstName}".title()
+        return f"{char_data.firstName}{sep}{char_data.givenName}"
+    return f"{char_data.givenName}{sep}{char_data.firstName}"
 
 
 def get_vocal_artist(vocal: MusicVocal, music: "Music") -> str:
@@ -113,9 +113,7 @@ def get_vocal_artist(vocal: MusicVocal, music: "Music") -> str:
             )
         else:
             char_data = music.outside_characters.get(c.character_id)
-            names.append(
-                char_data.name.title() if char_data else f"Character {c.character_id}"
-            )
+            names.append(char_data.name if char_data else f"Character {c.character_id}")
     return " & ".join(names)
 
 
