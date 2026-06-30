@@ -93,7 +93,7 @@ def _build_char_name(char_data: GameCharacterData) -> str:
         sep = ""
     else:
         sep = " "
-    if char_data.unit == "piapro":
+    if char_data.unit == "piapro" or _is_cjk(char_data.givenName):
         return f"{char_data.firstName}{sep}{char_data.givenName}"
     return f"{char_data.givenName}{sep}{char_data.firstName}"
 
